@@ -1,0 +1,133 @@
+{
+  "metadata": {
+    "schema_version": "1.0",
+    "fixture_id": "INC-SLOW-001",
+    "telemetry_origin": "synthetic",
+    "redacted": true,
+    "contains_sensitive_data": false,
+    "notice": "Synthetic telemetry created for contract and loader testing; it is not a production Logfire trace."
+  },
+  "incident": {
+    "incident_id": "INC-SLOW-001",
+    "service": "intervai",
+    "environment": "development",
+    "task_type": "answer_analysis",
+    "symptom": "Synthetic answer analysis request exceeded its test latency threshold.",
+    "request_id": "synthetic-request-slow-001",
+    "trace_id": "synthetic-trace-slow-001",
+    "started_at": "2026-08-27T04:30:00.000Z",
+    "ended_at": "2026-08-27T04:30:15.420Z"
+  },
+  "telemetry": {
+    "trace": {
+      "trace_id": "synthetic-trace-slow-001",
+      "request_id": "synthetic-request-slow-001",
+      "started_at": "2026-08-27T04:30:00.000Z",
+      "ended_at": "2026-08-27T04:30:15.420Z",
+      "duration_ms": 15420.0,
+      "status": "ok",
+      "spans": [
+        {
+          "span_id": "synthetic-span-root-001",
+          "parent_span_id": null,
+          "name": "POST /adaptive-interview/evaluate",
+          "kind": "server",
+          "started_at": "2026-08-27T04:30:00.000Z",
+          "ended_at": "2026-08-27T04:30:15.420Z",
+          "duration_ms": 15420.0,
+          "status": "ok",
+          "attributes": {
+            "http.method": "POST",
+            "http.route": "/adaptive-interview/evaluate",
+            "http.status_code": 200
+          }
+        },
+        {
+          "span_id": "synthetic-span-analysis-001",
+          "parent_span_id": "synthetic-span-root-001",
+          "name": "answer_analysis",
+          "kind": "internal",
+          "started_at": "2026-08-27T04:30:00.100Z",
+          "ended_at": "2026-08-27T04:30:15.220Z",
+          "duration_ms": 15120.0,
+          "status": "ok",
+          "attributes": {
+            "task.type": "answer_analysis"
+          }
+        },
+        {
+          "span_id": "synthetic-span-prompt-001",
+          "parent_span_id": "synthetic-span-analysis-001",
+          "name": "prepare analysis prompt",
+          "kind": "internal",
+          "started_at": "2026-08-27T04:30:00.150Z",
+          "ended_at": "2026-08-27T04:30:00.270Z",
+          "duration_ms": 120.0,
+          "status": "ok",
+          "attributes": {}
+        },
+        {
+          "span_id": "synthetic-span-route-001",
+          "parent_span_id": "synthetic-span-analysis-001",
+          "name": "select analysis model",
+          "kind": "internal",
+          "started_at": "2026-08-27T04:30:00.270Z",
+          "ended_at": "2026-08-27T04:30:00.310Z",
+          "duration_ms": 40.0,
+          "status": "ok",
+          "attributes": {
+            "routing.fallback_used": false
+          }
+        },
+        {
+          "span_id": "synthetic-span-provider-001",
+          "parent_span_id": "synthetic-span-analysis-001",
+          "name": "call synthetic model provider",
+          "kind": "client",
+          "started_at": "2026-08-27T04:30:00.310Z",
+          "ended_at": "2026-08-27T04:30:15.110Z",
+          "duration_ms": 14800.0,
+          "status": "ok",
+          "attributes": {
+            "gen_ai.provider.name": "synthetic-provider",
+            "gen_ai.request.model": "synthetic-answer-model",
+            "gen_ai.usage.input_tokens": 640,
+            "gen_ai.usage.output_tokens": 180,
+            "provider.retry_count": 0
+          }
+        },
+        {
+          "span_id": "synthetic-span-parse-001",
+          "parent_span_id": "synthetic-span-analysis-001",
+          "name": "parse structured analysis",
+          "kind": "internal",
+          "started_at": "2026-08-27T04:30:15.110Z",
+          "ended_at": "2026-08-27T04:30:15.200Z",
+          "duration_ms": 90.0,
+          "status": "ok",
+          "attributes": {
+            "schema.validation": "passed"
+          }
+        }
+      ]
+    },
+    "logs": [
+      {
+        "log_id": "synthetic-log-analysis-started-001",
+        "observed_at": "2026-08-27T04:30:00.100Z",
+        "level": "info",
+        "message": "Synthetic answer analysis started.",
+        "span_id": "synthetic-span-analysis-001",
+        "attributes": {}
+      },
+      {
+        "log_id": "synthetic-log-analysis-completed-001",
+        "observed_at": "2026-08-27T04:30:15.220Z",
+        "level": "info",
+        "message": "Synthetic answer analysis completed.",
+        "span_id": "synthetic-span-analysis-001",
+        "attributes": {}
+      }
+    ]
+  }
+}

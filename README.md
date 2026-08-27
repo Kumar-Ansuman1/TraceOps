@@ -20,12 +20,15 @@ The repository currently contains the M1 foundation:
 
 - FastAPI application with a health endpoint
 - Pydantic contracts for intake, evidence, hypotheses, and reports
+- Strict telemetry-fixture contracts and a read-only fixture loader
+- One explicitly synthetic slow `answer_analysis` fixture
+- Evaluation ground truth stored separately from investigator-visible evidence
 - Contract tests for correlation rules and diagnosis safety
 - Architecture and requirements specification
-- Location and format rules for future redacted incident fixtures
 
 LangGraph, LLM calls, Qdrant, live telemetry access, remediation actions, the
-dashboard, Docker, and AWS are intentionally not part of this scaffold.
+investigation endpoint, dashboard, Docker, and AWS are intentionally not part of
+this milestone.
 
 ## Project structure
 
@@ -33,7 +36,10 @@ dashboard, Docker, and AWS are intentionally not part of this scaffold.
 | --- | --- |
 | `app/main.py` | FastAPI application boundary |
 | `app/schemas.py` | Validated investigation data contracts |
+| `app/telemetry.py` | Validated trace and log fixture contracts |
+| `app/fixtures.py` | Safe, read-only incident fixture loader |
 | `fixtures/incidents/` | Redacted, reproducible incident telemetry |
+| `fixtures/ground_truth/` | Evaluation-only labels hidden from investigators |
 | `tests/` | API and contract tests |
 | `ARCHITECTURE_AND_REQUIREMENTS.md` | MVP scope, workflow, safety, and evaluation design |
 
@@ -86,11 +92,17 @@ pytest
 ### `GET /health`
 
 Returns the service name, version, and health status. The investigation endpoint
-will be added after the first redacted IntervAI incident fixture is defined.
+has not been implemented yet.
+
+## Current fixture
+
+`INC-SLOW-001` is synthetic test telemetry, not a recorded production incident.
+Its identifiers, timestamps, durations, spans, token counts, and designed root
+cause are invented solely to exercise the contract and loader. It must not be
+used to make claims about IntervAI's production behavior.
 
 ## Safety boundary
 
 The MVP has no production-write tools. Restarting services, changing models or
 configuration, deploying code, writing data, and sending notifications are all
 outside the current system boundary.
-

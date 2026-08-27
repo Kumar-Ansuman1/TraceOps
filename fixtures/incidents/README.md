@@ -1,13 +1,17 @@
 # Incident fixtures
 
-This directory will contain redacted JSON records for reproducible TraceOps
-investigations. The first fixture will represent one historical slow IntervAI
-`answer_analysis` request.
+This directory contains redacted JSON records for reproducible TraceOps
+investigations. `INC-SLOW-001.json` is currently an explicitly synthetic slow
+IntervAI `answer_analysis` request because no suitable production trace was
+available. It must be replaced or supplemented with recorded telemetry before
+making claims about a real incident.
 
 A fixture must not contain API keys, secrets, resume text, candidate answers,
 names, email addresses, audio, or other personal data.
 
-Every evaluation fixture must include a separately maintained expected incident
-class and known root cause. TraceOps must not read those expected labels during
-an investigation.
+Expected incident classes and known root causes live under `fixtures/ground_truth`.
+TraceOps must not read those expected labels during an investigation.
 
+The loader rejects malformed JSON, unknown contract fields, unsafe incident IDs,
+oversized files, common secret or personal-data fields, obvious secret or email
+values, inconsistent trace relationships, and evaluation-label leakage.

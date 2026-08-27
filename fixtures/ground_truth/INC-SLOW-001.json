@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "fixture_id": "INC-SLOW-001",
+  "telemetry_origin": "synthetic",
+  "expected_incident_class": "slow_llm_request",
+  "known_root_cause": "The synthetic model-provider call was deliberately defined to dominate the answer-analysis request duration.",
+  "verification": "This is scenario-design ground truth for synthetic test data, not a conclusion drawn from production telemetry."
+}
