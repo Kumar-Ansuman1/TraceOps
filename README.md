@@ -22,6 +22,8 @@ The repository currently contains the M1 foundation:
 - Pydantic contracts for intake, evidence, hypotheses, and reports
 - Strict telemetry-fixture contracts and a read-only fixture loader
 - One explicitly synthetic slow `answer_analysis` fixture
+- Fixture-backed tools for traces, latency timings, provider spans, and logs
+- Stable fixture record references on every returned observation
 - Evaluation ground truth stored separately from investigator-visible evidence
 - Contract tests for correlation rules and diagnosis safety
 - Architecture and requirements specification
@@ -38,6 +40,8 @@ this milestone.
 | `app/schemas.py` | Validated investigation data contracts |
 | `app/telemetry.py` | Validated trace and log fixture contracts |
 | `app/fixtures.py` | Safe, read-only incident fixture loader |
+| `app/tool_contracts.py` | Strict tool-result and evidence-reference contracts |
+| `app/telemetry_tools.py` | Fixture-backed read-only telemetry tools |
 | `fixtures/incidents/` | Redacted, reproducible incident telemetry |
 | `fixtures/ground_truth/` | Evaluation-only labels hidden from investigators |
 | `tests/` | API and contract tests |
@@ -93,6 +97,36 @@ pytest
 
 Returns the service name, version, and health status. The investigation endpoint
 has not been implemented yet.
+
+## Fixture-backed telemetry tools
+
+The current milestone adds four Python tools. They are not HTTP endpoints:
+
+- `get_trace(incident_id, trace_id)` returns the exact validated trace and spans.
+- `get_latency_breakdown(incident_id, trace_id, span_id=None)` returns recorded
+  durations plus calculated start offsets, end offsets, and trace-coverage
+  percentages. Each value says whether it was recorded or calculated.
+- `get_provider_attempts(incident_id, trace_id)` extracts only spans containing
+  supported provider attributes. Missing provider, model, token, retry, or error
+  attributes are returned as unavailable with a null value.
+- `search_logs(incident_id, trace_id, span_id=None, level=None, limit=20)` filters
+  only the selected fixture's logs and returns at most 50 records per call.
+
+All four tools use `load_telemetry_fixture()` as their only entrance to incident
+evidence. Returned observations carry stable references such as
+`fixture://INC-SLOW-001/span/synthetic-span-provider-001#duration_ms`, so later
+milestones can cite an exact fixture, record, and field. Tool calls do not write
+to or modify fixture evidence.
+
+These tools return observations only. They do not classify the incident, form a
+hypothesis, identify a root cause, or recommend an action.
+
+### Current limitation
+
+The tools can read only `fixtures/incidents/INC-SLOW-001.json`: one synthetic,
+development-environment IntervAI `answer_analysis` case. They do not connect to
+Logfire or any live telemetry source, and production/investigator code never
+reads `fixtures/ground_truth`.
 
 ## Current fixture
 

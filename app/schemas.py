@@ -188,4 +188,3 @@ class HealthResponse(StrictModel):
     status: str
     service: str
     version: str
-

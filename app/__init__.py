@@ -1,2 +1,1 @@
 """TraceOps application package."""
-

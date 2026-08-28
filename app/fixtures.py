@@ -53,6 +53,22 @@ class FixtureLoadError(ValueError):
     """Raised when a fixture is missing, malformed, unsafe, or schema-invalid."""
 
 
+class FixtureInputError(FixtureLoadError):
+    """Raised when a caller supplies an unsafe fixture identifier or path."""
+
+
+class FixtureNotFoundError(FixtureLoadError):
+    """Raised when no fixture exists for a valid incident identifier."""
+
+
+class MalformedFixtureError(FixtureLoadError):
+    """Raised when fixture bytes or relationships do not satisfy the contract."""
+
+
+class UnsafeFixtureError(FixtureLoadError):
+    """Raised when fixture content contains a forbidden field or value."""
+
+
 def _normalise_field_name(field_name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", field_name.strip().lower()).strip("_")
 
@@ -69,7 +85,7 @@ def _reject_unsafe_content(value: Any, location: str = "fixture") -> None:
     if isinstance(value, dict):
         for key, child in value.items():
             if _is_forbidden_field(str(key)):
-                raise FixtureLoadError(f"unsafe field '{key}' found at {location}")
+                raise UnsafeFixtureError(f"unsafe field '{key}' found at {location}")
             _reject_unsafe_content(child, f"{location}.{key}")
         return
 
@@ -81,7 +97,7 @@ def _reject_unsafe_content(value: Any, location: str = "fixture") -> None:
     if isinstance(value, str):
         for pattern in FORBIDDEN_VALUE_PATTERNS:
             if pattern.search(value):
-                raise FixtureLoadError(f"sensitive value found at {location}")
+                raise UnsafeFixtureError(f"sensitive value found at {location}")
 
 
 def load_telemetry_fixture(
@@ -91,34 +107,40 @@ def load_telemetry_fixture(
     """Load one bounded fixture after path, safety, and schema validation."""
 
     if not INCIDENT_ID_PATTERN.fullmatch(incident_id):
-        raise FixtureLoadError("incident ID has an invalid or unsafe format")
+        raise FixtureInputError("incident ID has an invalid or unsafe format")
 
     fixture_root = fixtures_dir.resolve()
     fixture_path = (fixture_root / f"{incident_id}.json").resolve()
     if not fixture_path.is_relative_to(fixture_root):
-        raise FixtureLoadError("fixture path escapes the configured directory")
+        raise FixtureInputError("fixture path escapes the configured directory")
 
     try:
         file_size = fixture_path.stat().st_size
     except FileNotFoundError as exc:
-        raise FixtureLoadError(f"fixture not found for incident {incident_id}") from exc
+        raise FixtureNotFoundError(
+            f"fixture not found for incident {incident_id}"
+        ) from exc
 
     if file_size > MAX_FIXTURE_BYTES:
-        raise FixtureLoadError("fixture exceeds the maximum allowed size")
+        raise MalformedFixtureError("fixture exceeds the maximum allowed size")
 
     try:
         payload = json.loads(fixture_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise FixtureLoadError("fixture is not valid UTF-8 JSON") from exc
+        raise MalformedFixtureError("fixture is not valid UTF-8 JSON") from exc
 
     _reject_unsafe_content(payload)
 
     try:
         fixture = TelemetryFixture.model_validate(payload)
     except ValidationError as exc:
-        raise FixtureLoadError("fixture does not match the telemetry contract") from exc
+        raise MalformedFixtureError(
+            "fixture does not match the telemetry contract"
+        ) from exc
 
     if fixture.metadata.fixture_id != incident_id:
-        raise FixtureLoadError("requested incident ID does not match fixture metadata")
+        raise MalformedFixtureError(
+            "requested incident ID does not match fixture metadata"
+        )
 
     return fixture

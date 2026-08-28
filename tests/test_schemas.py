@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -34,8 +34,8 @@ def test_intake_accepts_request_id() -> None:
 
 def test_intake_accepts_bounded_time_window() -> None:
     payload = intake_payload()
-    payload["started_at"] = datetime(2026, 8, 26, 8, 0, tzinfo=timezone.utc)
-    payload["ended_at"] = datetime(2026, 8, 26, 8, 5, tzinfo=timezone.utc)
+    payload["started_at"] = datetime(2026, 8, 26, 8, 0, tzinfo=UTC)
+    payload["ended_at"] = datetime(2026, 8, 26, 8, 5, tzinfo=UTC)
 
     intake = IncidentIntake.model_validate(payload)
 
@@ -46,14 +46,14 @@ def test_intake_accepts_bounded_time_window() -> None:
     "fields",
     [
         {},
-        {"started_at": datetime(2026, 8, 26, 8, 0, tzinfo=timezone.utc)},
+        {"started_at": datetime(2026, 8, 26, 8, 0, tzinfo=UTC)},
         {
-            "started_at": datetime(2026, 8, 26, 8, 5, tzinfo=timezone.utc),
-            "ended_at": datetime(2026, 8, 26, 8, 0, tzinfo=timezone.utc),
+            "started_at": datetime(2026, 8, 26, 8, 5, tzinfo=UTC),
+            "ended_at": datetime(2026, 8, 26, 8, 0, tzinfo=UTC),
         },
         {
-            "started_at": datetime(2026, 8, 26, 8, 0, tzinfo=timezone.utc),
-            "ended_at": datetime(2026, 8, 27, 8, 1, tzinfo=timezone.utc),
+            "started_at": datetime(2026, 8, 26, 8, 0, tzinfo=UTC),
+            "ended_at": datetime(2026, 8, 27, 8, 1, tzinfo=UTC),
         },
     ],
 )

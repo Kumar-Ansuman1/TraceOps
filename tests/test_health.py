@@ -2,7 +2,6 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-
 client = TestClient(app)
 
 
@@ -15,4 +14,3 @@ def test_health_endpoint() -> None:
         "service": "traceops",
         "version": "0.1.0",
     }
-
