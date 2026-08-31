@@ -16,7 +16,7 @@ The MVP supports three incident categories:
 - Model-provider or API failures
 - Incorrect fallback routing
 
-The repository currently contains the M1 foundation:
+The repository currently contains the deterministic investigation foundation:
 
 - FastAPI application with a health endpoint
 - Pydantic contracts for intake, evidence, hypotheses, and reports
@@ -26,6 +26,8 @@ The repository currently contains the M1 foundation:
 - Stable fixture record references on every returned observation
 - A deterministic evidence collector with fixed tool ordering and no retries
 - Recorded-time timeline, unavailable-field inventory, and citation catalog
+- A bounded evidence-context builder with deterministic fact selection
+- Deduplicated facts and citation-closed, LLM-ready context contracts
 - Evaluation ground truth stored separately from investigator-visible evidence
 - Contract tests for correlation rules and diagnosis safety
 - Architecture and requirements specification
@@ -46,6 +48,8 @@ this milestone.
 | `app/telemetry_tools.py` | Fixture-backed read-only telemetry tools |
 | `app/evidence_contracts.py` | Immutable evidence-collection result contracts |
 | `app/evidence_collector.py` | Deterministic evidence-collection coordinator |
+| `app/context_contracts.py` | Strict contracts for bounded investigation context |
+| `app/evidence_context.py` | Deterministic evidence-context builder |
 | `fixtures/incidents/` | Redacted, reproducible incident telemetry |
 | `fixtures/ground_truth/` | Evaluation-only labels hidden from investigators |
 | `tests/` | API and contract tests |
@@ -177,12 +181,72 @@ result = collect_evidence(
 print(result.status.value)  # completed
 ```
 
+## Deterministic evidence-context builder
+
+`build_investigation_context(collection)` converts one
+`EvidenceCollectionResult` into compact `InvestigationContext` data for a future
+citation-constrained hypothesis generator. It consumes only the supplied
+collection result. It does not read fixtures, call telemetry tools, access the
+network, call an LLM, form a hypothesis, calculate confidence, or recommend a
+remediation.
+
+The context includes:
+
+- The incident/trace scope and collection status.
+- Every attempted tool call, its controlled outcome, and tools not executed
+  after a failure.
+- Structured recorded or calculated facts with stable IDs and exact citation
+  IDs.
+- A smaller chronological timeline with citation IDs.
+- A separate inventory of fields explicitly marked unavailable.
+- Counts and truncation flags for facts, timeline events, unavailable fields,
+  and the original bounded log search.
+- Only the citation entries used by included content; orphan citations are
+  rejected.
+
+Fact selection is deterministic. Trace duration/status come first, followed by
+the longest non-root span durations, calculated trace coverage, bounded
+provider attempts, scalar span attributes (routing first), and logs. Error and
+warning logs are selected before informational and debug logs. Stable record,
+metric, value, origin, and source identities deduplicate observations repeated
+by multiple telemetry tools. Recorded `0` and `false` values remain available
+facts; unavailable values never become facts.
+
+The current limits are 24 total facts, four non-root span-duration facts and
+their four calculated coverage facts, three provider attempts, six scalar
+attribute facts, five log facts, 20 timeline events, and 12 unavailable fields.
+Stable timestamps/record IDs break ties, and the context reports whenever any
+limit or the original log-search limit reduced the available evidence.
+
+Collection handling is explicit:
+
+- A completed collection produces a completed context.
+- A partial collection keeps facts from successful tools, preserves the safe
+  failure code/message, and lists tools that were not executed.
+- A failed collection with no usable observations raises
+  `NoUsableEvidenceError` instead of producing an evidence-empty prompt.
+
+Example:
+
+```python
+from app.evidence_collector import collect_evidence
+from app.evidence_context import build_investigation_context
+
+collection = collect_evidence(
+    incident_id="INC-SLOW-001",
+    trace_id="synthetic-trace-slow-001",
+)
+
+context = build_investigation_context(collection)
+```
+
 ### Current limitation
 
-The tools and collector can read only `fixtures/incidents/INC-SLOW-001.json`:
-one synthetic, development-environment IntervAI `answer_analysis` case. They do
-not connect to Logfire or any live telemetry source, and production,
-tool, and collector code never reads `fixtures/ground_truth`.
+The tools, collector, and context builder currently support only evidence
+originating from `fixtures/incidents/INC-SLOW-001.json`: one synthetic,
+development-environment IntervAI `answer_analysis` case. They do not connect to
+Logfire or any live telemetry source. Investigator code never reads
+`fixtures/ground_truth`. No LLM or hypothesis generation is implemented yet.
 
 ## Current fixture
 
