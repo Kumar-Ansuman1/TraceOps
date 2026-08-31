@@ -24,6 +24,8 @@ The repository currently contains the M1 foundation:
 - One explicitly synthetic slow `answer_analysis` fixture
 - Fixture-backed tools for traces, latency timings, provider spans, and logs
 - Stable fixture record references on every returned observation
+- A deterministic evidence collector with fixed tool ordering and no retries
+- Recorded-time timeline, unavailable-field inventory, and citation catalog
 - Evaluation ground truth stored separately from investigator-visible evidence
 - Contract tests for correlation rules and diagnosis safety
 - Architecture and requirements specification
@@ -42,6 +44,8 @@ this milestone.
 | `app/fixtures.py` | Safe, read-only incident fixture loader |
 | `app/tool_contracts.py` | Strict tool-result and evidence-reference contracts |
 | `app/telemetry_tools.py` | Fixture-backed read-only telemetry tools |
+| `app/evidence_contracts.py` | Immutable evidence-collection result contracts |
+| `app/evidence_collector.py` | Deterministic evidence-collection coordinator |
 | `fixtures/incidents/` | Redacted, reproducible incident telemetry |
 | `fixtures/ground_truth/` | Evaluation-only labels hidden from investigators |
 | `tests/` | API and contract tests |
@@ -100,7 +104,7 @@ has not been implemented yet.
 
 ## Fixture-backed telemetry tools
 
-The current milestone adds four Python tools. They are not HTTP endpoints:
+TraceOps currently has four Python telemetry tools. They are not HTTP endpoints:
 
 - `get_trace(incident_id, trace_id)` returns the exact validated trace and spans.
 - `get_latency_breakdown(incident_id, trace_id, span_id=None)` returns recorded
@@ -121,12 +125,64 @@ to or modify fixture evidence.
 These tools return observations only. They do not classify the incident, form a
 hypothesis, identify a root cause, or recommend an action.
 
+## Deterministic evidence collector
+
+`collect_evidence(incident_id, trace_id)` coordinates the existing telemetry
+tools for one exact incident and trace. It does not read fixture files itself;
+each tool continues to use `load_telemetry_fixture()` as the only path to
+incident evidence.
+
+Every collection uses this fixed order:
+
+1. `get_trace`
+2. `get_latency_breakdown`
+3. `get_provider_attempts`
+4. `search_logs`
+
+Each tool is called at most once and there are no retries. Every attempted call
+gets a deterministic call ID, execution order, scope, outcome, controlled error
+when applicable, and the exact source references returned by that tool.
+
+The collection status is:
+
+- `completed` when all four tools succeed.
+- `partial` when one or more tools returned evidence before a later non-fatal
+  tool failure.
+- `failed` when no evidence was collected or when unsafe input, an unknown
+  incident, a trace mismatch, or a malformed fixture causes a fatal failure.
+
+Collection stops at the first failure. Evidence returned by earlier successful
+tools is preserved. The result also contains:
+
+- A timeline made only from recorded trace, span, and log timestamps. Equal
+  timestamps use a stable event-type and record-ID tie-break order.
+- A deduplicated inventory of fields that the tools explicitly marked
+  unavailable. These fields are not labelled relevant or required.
+- A deduplicated catalog containing every exact fixture source reference
+  returned by successful tools.
+
+The collector returns observations only. It does not classify the incident,
+generate hypotheses, identify a root cause, calculate confidence, or recommend
+actions. It is a Python workflow, not a new API endpoint.
+
+Example:
+
+```python
+from app.evidence_collector import collect_evidence
+
+result = collect_evidence(
+    incident_id="INC-SLOW-001",
+    trace_id="synthetic-trace-slow-001",
+)
+print(result.status.value)  # completed
+```
+
 ### Current limitation
 
-The tools can read only `fixtures/incidents/INC-SLOW-001.json`: one synthetic,
-development-environment IntervAI `answer_analysis` case. They do not connect to
-Logfire or any live telemetry source, and production/investigator code never
-reads `fixtures/ground_truth`.
+The tools and collector can read only `fixtures/incidents/INC-SLOW-001.json`:
+one synthetic, development-environment IntervAI `answer_analysis` case. They do
+not connect to Logfire or any live telemetry source, and production,
+tool, and collector code never reads `fixtures/ground_truth`.
 
 ## Current fixture
 
